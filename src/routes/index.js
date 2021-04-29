@@ -1,15 +1,15 @@
 const router = require('express').Router();
-const jwt = require('jsonwebtoken');
-const path = require('path');
 
 const { generateTokens, verifyToken, issueTokens } = require('../utils/tokens');
 const sendError = require('../utils/sendError');
 const { checkUser } = require('../utils/common_operations');
 
-
+// handles register, login, issuing tokens
 router.use('/auth', require('./auth'));
 
+// protected route
 router.get('/', async (req, res) => {
+	// redirect if unauthorized
 	if (!req.cookies.Authorization) {
 		return res.status(401).redirect('/auth/login');
 	}
@@ -56,7 +56,7 @@ router.get('/', async (req, res) => {
 				payload = decoded;
 			});
 
-		// refresh token not expired, use to refresh the access token
+		// refresh token not expired, use it to refresh the access token
 		if (isTokenValid) {
 			// check if user from payload exists in the database
 			const user = await checkUser(
@@ -79,12 +79,11 @@ router.get('/', async (req, res) => {
 					{ refresh: true }
 				);
 
-				if (!access_token) return;
-
-				issueTokens(res, {
-					access_token,
-					refresh_token: refreshToken
-				}, user);
+				access_token &&
+					issueTokens(res, {
+						access_token,
+						refresh_token: refreshToken
+					}, user);
 			}
 		}
 	}

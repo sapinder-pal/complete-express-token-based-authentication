@@ -9,3 +9,7 @@ DB_URL=<your database url>
 ## Quickstart
 You need to have the `mongo` command running either in a terminal in the background, or in the your IDE terminal.  
 Once you have the database server running, just run `npm start` command to start the development server.  
+
+## Note
+For development purposes, the expiry time of the access token is set to 30 seconds whereas that of the refresh token
+is set to 60 seconds. You may increase the expiry time in `generateTokens` function inside `utils/tokens.js` file.

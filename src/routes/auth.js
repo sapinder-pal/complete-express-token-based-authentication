@@ -96,11 +96,8 @@ router.get('/issue_tokens', (req, res) => {
 			sendError(res, 500, err);
 		});
 
-	if (!tokens) {
-		return;
-	}
-
-	issueTokens(res, tokens, user);
+	// if tokens have been generated, issue them
+	tokens && issueTokens(res, tokens, user);
 })
 
 module.exports = router;
