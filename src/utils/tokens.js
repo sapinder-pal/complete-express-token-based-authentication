@@ -15,75 +15,72 @@ const PUBLIC_KEY = fs.readFileSync(path.resolve('public_key.pem'), 'utf-8');
  * @returns An `Object` containing the token(s)
  */
 function generateTokens(user, errHandler, options) {
-	const payload = {
-		sub: user._id,
-		iat: Date.now(),
-		exp: (Date.now() / 1000) + 30,  // 30s, generally set to a few minutes
-		username: user.username
-	};
+  const payload = {
+    sub: user._id,
+    username: user.username,
+  };
 
-	try {
-		const accessToken = jwt.sign(payload, PRIVATE_KEY, { algorithm: 'RS256' });
+  try {
+    const accessToken = jwt.sign(payload, PRIVATE_KEY, {
+      algorithm: 'RS256',
+      expiresIn: 30,
+    });
 
-		// generate only access token if `refresh` is true
-		if (options && options.refresh) {
-			return {
-				access_token: `Bearer ${accessToken}`
-			}
-		}
+    // generate only access token if `refresh` is true
+    if (options && options.refresh) {
+      return {
+        access_token: `Bearer ${accessToken}`,
+      };
+    }
 
-		// else also generate refreshToken
-		const refreshToken = jwt.sign({
-			...payload,
-			exp: (Date.now() / 1000) + 60     // 60s, can set them to a few hours, days, or weeks based upon preference & security
-		},
-			PRIVATE_KEY, { algorithm: 'RS256' }
-		);
+    // else also generate refreshToken
+    const refreshToken = jwt.sign(payload, PRIVATE_KEY, {
+      algorithm: 'RS256',
+      expiresIn: 60, // can set them to a few hours, days, or weeks based upon preference & security
+    });
 
-		return {
-			access_token: `Bearer ${accessToken}`,
-			refresh_token: refreshToken
-		};
-	} catch (err) {
-		errHandler(err)
-	}
+    return {
+      access_token: `Bearer ${accessToken}`,
+      refresh_token: refreshToken,
+    };
+  } catch (err) {
+    errHandler(err);
+  }
 }
 
 /**
- * @description Accepts a token and a callback that are directly passed to 
+ * @description Accepts a token and a callback that are directly passed to
  * `jwt.verify()` method
  */
 async function verifyToken(token, callback) {
-	jwt.verify(token, PUBLIC_KEY, callback);
+  jwt.verify(token, PUBLIC_KEY, callback);
 }
 
 /**
  * @param {Response} responseObj - A `Response` object to be used to send HTTP request
  * @param {object} tokens - Contains the tokens to be issued
  * @param {object} user - The user to whom token is be issued
-*/
+ */
 async function issueTokens(responseObj, tokens, user) {
-	// send tokens in 'Authorization' cookie
-	responseObj.cookie('Authorization',
-		JSON.stringify(tokens),
-		{
-			httpOnly: true,
-			sameSite: 'lax',
-			secure: true
-		});
+  // send tokens in 'Authorization' cookie
+  responseObj.cookie('Authorization', JSON.stringify(tokens), {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: true,
+  });
 
-	// store refresh token in the user's document
-	User.updateOne(
-		{ _id: user._id },
-		{ refreshToken: tokens.refresh_token },
-		err => {
-			if (err) {
-				return sendError(responseObj, 500, err);
-			};
+  // store refresh token in the user's document
+  User.updateOne(
+    { _id: user._id },
+    { refreshToken: tokens.refresh_token },
+    err => {
+      if (err) {
+        return sendError(responseObj, 500, err);
+      }
 
-			responseObj.status(200).redirect('/');
-		}
-	);
+      responseObj.status(200).redirect('/');
+    }
+  );
 }
 
 module.exports = { generateTokens, verifyToken, issueTokens };
